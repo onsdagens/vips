@@ -12,7 +12,7 @@ dir:
 	mkdir -p $(BUILD_DIR)
 
 clean:
-	rm -rf build .build dependencies $(PROJ).f ./src/*.sv ./src/*.sv.map
+	rm -rf build .build dependencies $(PROJ).f ./src/*.sv ./src/*.sv.map slpp_all
 
 .PHONY: flash build dir all clean
 
@@ -24,7 +24,8 @@ clean:
 
 #%.json: %.v
 %.json: $/$(SRC_DIR)/%.sv
-	yosys -m slang -p "read_slang $(shell cat $(PROJ).f) ./oscillator.sv; hierarchy -check -top vips_Vips; synth_ecp5 -json $(BUILD_DIR)/$@"
+	rm -f ./src/*.sv.map
+	synlig -p "read_systemverilog $(shell cat $(PROJ).f) ./oscillator.sv; hierarchy -check -top vips_Vips; synth_ecp5 -json $(BUILD_DIR)/$@"
 
 %.cfg: %.json
 	nextpnr-ecp5 --json $(BUILD_DIR)/$< --textcfg $(BUILD_DIR)/$@ --45k --package CABGA256 --lpf numato.lpf
