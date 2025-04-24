@@ -19,11 +19,12 @@ clean:
 %.sv: ./$(SRC_DIR)/${PROJ}.veryl
 	veryl build
 
-%.v: ./$(SRC_DIR)/%.sv
-	sv2v $(shell cat $(PROJ).f) ./oscillator.sv > $(BUILD_DIR)/$@
+#%.v: ./$(SRC_DIR)/%.sv
+#	sv2v $(shell cat $(PROJ).f) ./oscillator.sv > $(BUILD_DIR)/$@
 
-%.json: %.v
-	yosys -p "read_verilog $(BUILD_DIR)/$<; hierarchy -check -top vips_Vips; synth_ecp5 -json $(BUILD_DIR)/$@"
+#%.json: %.v
+%.json: $/$(SRC_DIR)/%.sv
+	yosys -m slang -p "read_slang $(shell cat $(PROJ).f) ./oscillator.sv; hierarchy -check -top vips_Vips; synth_ecp5 -json $(BUILD_DIR)/$@"
 
 %.cfg: %.json
 	nextpnr-ecp5 --json $(BUILD_DIR)/$< --textcfg $(BUILD_DIR)/$@ --45k --package CABGA256 --lpf numato.lpf
