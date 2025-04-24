@@ -7,6 +7,8 @@
 *.vcd
 info.toml
 .build
+*.o
+build
 
 # Added by cargo
 
