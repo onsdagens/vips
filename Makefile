@@ -25,7 +25,7 @@ clean:
 #%.json: %.v
 %.json: $/$(SRC_DIR)/%.sv
 	rm -f ./src/*.sv.map
-	synlig -p "read_systemverilog $(shell cat $(PROJ).f) ./oscillator.sv; hierarchy -check -top vips_Vips; synth_ecp5 -json $(BUILD_DIR)/$@"
+	yosys -m slang -p "read_slang $(shell cat $(PROJ).f) ./oscillator.sv; hierarchy -check -top vips_Vips; synth_ecp5 -json $(BUILD_DIR)/$@"
 
 %.cfg: %.json
 	nextpnr-ecp5 --json $(BUILD_DIR)/$< --textcfg $(BUILD_DIR)/$@ --45k --package CABGA256 --lpf numato.lpf
