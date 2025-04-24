@@ -1,6 +1,6 @@
 # VIPS, MIPS32 based single-cycle model in Veryl-lang
 
-[!Note]
+[!NOTE]
 This repo provides a synthesis workflow for the original Vips. In the process, i've broken the tests, so disregard those for now.
 ## Dependencies
 
