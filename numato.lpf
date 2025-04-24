@@ -1,0 +1,16 @@
+# https://numato.com/docs/mimas-ecp5-mini-fpga-development-board/
+
+LOCATE COMP "i_reset_n" SITE "A4";
+IOBUF PORT "i_reset_n" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "led0" SITE "E12";
+IOBUF PORT "led0" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "led1" SITE "D13";
+IOBUF PORT "led1" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "led2" SITE "D12";
+IOBUF PORT "led2" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "led3" SITE "C13";
+IOBUF PORT "led3" IO_TYPE=LVCMOS33;

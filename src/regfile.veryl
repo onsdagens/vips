@@ -12,6 +12,10 @@ module RegFile (
     o_a_data  : output logic<32>,
     o_b_data  : output logic<32>,
     o_dbg_data: output logic<32>,
+    led0      : output logic    ,
+    led1      : output logic    ,
+    led2      : output logic    ,
+    led3      : output logic    ,
 
 ) {
     var regs: logic<32> [32];
@@ -27,6 +31,10 @@ module RegFile (
             }
         }
     }
+    assign led0 = regs[1][0];
+    assign led1 = regs[1][1];
+    assign led2 = regs[1][2];
+    assign led3 = regs[1][3];
 
     always_comb {
         o_a_data   = if i_a_addr == 0 ? 0 : regs[i_a_addr];

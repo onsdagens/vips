@@ -1,13 +1,25 @@
 // src/vips.veryl
 
 module Vips (
-    i_clk         : input  clock               ,
-    i_reset       : input  reset_async_high    ,
-    i_dbg_reg     : input  logic           <5> ,
-    i_dbg_dm_addr : input  logic           <32>,
-    o_dbg_reg_data: output logic           <32>,
-    o_dbg_dm_data : output logic           <32>,
+    //    i_clk  : input  clock,
+    // electrically the reset signal is active low,
+    i_reset_n: input  reset_async_low,
+    led0     : output logic          ,
+    led1     : output logic          ,
+    led2     : output logic          ,
+    led3     : output logic,
+    // i_dbg_reg     : input  logic           <5> ,
+    // i_dbg_dm_addr : input  logic           <32>,
+    // o_dbg_reg_data: output logic           <32>,
+    // o_dbg_dm_data : output logic           <32>,
 ) {
+    // rest of Vips assumes reset is active high, so flip the physical reset signal
+    let i_reset: reset = ~i_reset_n;
+    var i_clk  : clock;
+    inst osc: $sv::OSC_TOP (
+        clk: i_clk,
+    );
+
     /* verilator lint_off UNOPTFLAT */
     var pc     : logic<32>;
     var pc_next: logic<32>;
@@ -106,18 +118,23 @@ module Vips (
     var a_data: logic<32>;
     var b_data: logic<32>;
 
+    let fake_i_dbg_addr: logic<5> = 0;
     inst regfile: RegFile (
-        i_clk                     ,
-        i_reset                   ,
-        i_a_addr  : rs            ,
-        i_b_addr  : rt            ,
-        i_w_ena   : rf_we         ,
-        i_w_addr  : wb_reg        ,
-        i_w_data  : wb_data       ,
-        i_dbg_addr: i_dbg_reg     ,
-        o_a_data  : a_data        ,
-        o_b_data  : b_data        ,
-        o_dbg_data: o_dbg_reg_data,
+        i_clk                      ,
+        i_reset                    ,
+        i_a_addr  : rs             ,
+        i_b_addr  : rt             ,
+        i_w_ena   : rf_we          ,
+        i_w_addr  : wb_reg         ,
+        i_w_data  : wb_data        ,
+        i_dbg_addr: fake_i_dbg_addr,
+        o_a_data  : a_data         ,
+        o_b_data  : b_data         ,
+        o_dbg_data: _              ,
+        led0      : led0           ,
+        led1      : led1           ,
+        led2      : led2           ,
+        led3      : led3           ,
     );
 
     inst branch: Branch (
@@ -160,15 +177,16 @@ module Vips (
         z           , // not used, but connected
     );
 
+    let fake_i_dbg_dm_addr: logic<32> = 0;
     inst data_mem: DataMem (
-        i_clk                    ,
-        i_reset                  ,
-        i_we      : dm_we        ,
-        i_addr    : alu_r        ,
-        i_data    : b_data       ,
-        i_dbg_addr: i_dbg_dm_addr,
-        o_data    : dm_data      ,
-        o_dbg_data: o_dbg_dm_data,
+        i_clk                         ,
+        i_reset                       ,
+        i_we      : dm_we             ,
+        i_addr    : alu_r             ,
+        i_data    : b_data            ,
+        i_dbg_addr: fake_i_dbg_dm_addr,
+        o_data    : dm_data           ,
+        o_dbg_data: _                 ,
     );
 
     // inst wb_mux : Mux2
