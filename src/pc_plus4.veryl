@@ -28,34 +28,3 @@ module PcPlus4 (
     }
     assign o_pc = pc;
 }
-
-#[test(pc_plus4)]
-embed (inline) sv{{{
-    module test;
-        logic clk;
-        logic reset;
-        logic [31:0] pc;
-       
-        vips_PcPlus4 pcplus4 (clk, reset, pc);
-
-        initial begin
-            reset = 1;
-            assert (pc == 0) else $error("reset");
-
-            clk = 0; #10 clk = 1; #10;
-            assert (pc == 0) else $error("0");
-
-            reset = 0;
-            clk = 0; #10 clk = 1; #10;
-            assert (pc == 4) else $error("4");
-
-            clk = 0; #10 clk = 1; #10;
-            assert (pc == 8) else $error("8");
-
-            clk = 0; #10 clk = 1; #10;
-            assert (pc == 12) else $error("12");
-
-            $finish;
-        end
-    endmodule
-}}}

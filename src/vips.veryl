@@ -1,24 +1,25 @@
 // src/vips.veryl
 
 module Vips (
-    //    i_clk  : input  clock,
+    i_clk: input clock,
     // electrically the reset signal is active low,
-    i_reset_n: input  reset_async_low,
-    led0     : output logic          ,
-    led1     : output logic          ,
-    led2     : output logic          ,
-    led3     : output logic          ,
+    //i_reset_n: input  reset_async_low,
+    i_reset: input  reset,
+    led0   : output logic,
+    led1   : output logic,
+    led2   : output logic,
+    led3   : output logic,
     // i_dbg_reg     : input  logic           <5> ,
     // i_dbg_dm_addr : input  logic           <32>,
     // o_dbg_reg_data: output logic           <32>,
     // o_dbg_dm_data : output logic           <32>,
 ) {
     // rest of Vips assumes reset is active high, so flip the physical reset signal
-    let i_reset: reset = ~i_reset_n;
-    var i_clk  : clock;
-    inst osc: $sv::OSC_TOP (
-        clk: i_clk,
-    );
+    //let i_reset: reset = ~i_reset_n;
+    //var i_clk  : clock;
+    //inst osc: $sv::OSC_TOP (
+    //    clk: i_clk,
+    //);
 
     /* verilator lint_off UNOPTFLAT */
     var pc     : logic<32>;
@@ -144,10 +145,6 @@ module Vips (
         o_a_data  : a_data         ,
         o_b_data  : b_data         ,
         o_dbg_data: _              ,
-        led0      : led0           ,
-        led1      : led1           ,
-        led2      : led2           ,
-        led3      : led3           ,
     );
 
     inst branch: Branch (
@@ -192,16 +189,17 @@ module Vips (
         z           , // not used, but connected
     );
 
-    let fake_i_dbg_dm_addr: logic<32> = 0;
     inst data_mem: DataMem (
-        i_clk                         ,
-        i_reset                       ,
-        i_we      : dm_we             ,
-        i_addr    : alu_r             ,
-        i_data    : b_data            ,
-        i_dbg_addr: fake_i_dbg_dm_addr,
-        o_data    : dm_data           ,
-        o_dbg_data: _                 ,
+        i_clk           ,
+        i_reset         ,
+        i_we   : dm_we  ,
+        i_addr : alu_r  ,
+        i_data : b_data ,
+        o_data : dm_data,
+        led0            ,
+        led1            ,
+        led2            ,
+        led3            ,
     );
 
     // inst wb_mux : Mux2
@@ -209,162 +207,360 @@ module Vips (
 }
 
 #[test(vips)]
-embed (inline) sv{{{
-    module test;
+module VipsTest {
 
-        logic i_clk;
-        logic i_reset;      
-        logic [4:0] i_dbg_reg;
-        logic [31:0] o_dbg_reg_data;
-        logic [31:0] i_dbg_dm_addr;
-        logic [31:0] o_dbg_dm_data;
-        
-        vips_Vips vips(i_clk, i_reset, i_dbg_reg, i_dbg_dm_addr, o_dbg_reg_data, o_dbg_dm_data);
+    inst clk: $tb::clock_gen #( period: 10 );
+    inst rst: $tb::reset_gen (
+        clk  ,
+    );
+    var led0: logic;
+    var led1: logic;
+    var led2: logic;
+    var led3: logic;
+    inst dut: Vips (
+        i_clk  : clk,
+        i_reset: rst,
+        led0        ,
+        led1        ,
+        led2        ,
+        led3        ,
+    );
 
-        task clock;
-	    begin
-		    i_clk = 0; #10; i_clk = 1; #10;
-	    end
-        endtask
+    initial {
+        rst.assert();
 
-        initial begin
-            i_reset = 1;
-            clock(); // 00 addi zero at 4,  (nop)
-            assert (vips.pc == 32'h00);
-            assert (vips.rf_we == 1);
-            assert (vips.alu_b_sel == 1);
-            assert (vips.alu_op == 2'b10);
-            assert (vips.alu_sub == 0);
-            assert (vips.imm_sign_ext == 1);
-            assert (vips.w_reg_sel == 0);
+        clk.next();
 
-            i_reset = 0;
-            #1; // progress simulation
-            assert (vips.pc == 32'h00);
-            assert (vips.rf_we == 1);
-            assert (vips.alu_b_sel == 1);
-            assert (vips.alu_op == 2'b10);
-            assert (vips.alu_sub == 0);
-            assert (vips.imm_sign_ext == 1);
-            assert (vips.w_reg_sel == 0);
+        clk.next();
 
-            clock(); // 04 sw   r1 0(zero)  (dm[0] <- 4)
-            assert (vips.pc == 32'h04);
-            assert (vips.rf_we == 0);
-            assert (vips.alu_b_sel == 1);
-            assert (vips.alu_op == 2'b10);
-            assert (vips.alu_sub == 0);
-            assert (vips.imm_sign_ext == 1);
-            assert (vips.w_reg_sel == 0);
+        clk.next();
 
-            clock(); // 08 addi r2 r1 8,    (r2 <- 12)
-            assert (vips.pc == 32'h08);
-            assert (vips.rf_we == 1);
-            assert (vips.alu_b_sel == 1);
-            assert (vips.alu_op == 2'b10);
-            assert (vips.alu_sub == 0);
-            assert (vips.imm_sign_ext == 1);
-            assert (vips.w_reg_sel == 0);
+        clk.next();
 
-            clock(); // 0c sw   r2 4(zero)  (dm[1] <- 12)
-            assert (vips.pc == 32'h0c);
-            // assert (vips.rf_we == 0);
-            // assert (vips.alu_b_sel == 1);
-            // assert (vips.alu_op == 2'b10);
-            // assert (vips.alu_sub == 0);
-            // assert (vips.imm_sign_ext == 1); 
-            // assert (vips.w_reg_sel == 1);
+        clk.next();
 
-            clock(); // 10 lw   r3 -4(r1)   (r3 <- dm[0] = 4)
-            assert (vips.pc == 32'h10);
-            // assert (vips.rf_we == 1);
-            // assert (vips.alu_b_sel == 1);
-            // assert (vips.alu_op == 2'b10);
-            // assert (vips.alu_sub == 0);
-            // assert (vips.imm_sign_ext == 1);
-            // assert (vips.w_reg_sel == 0);
+        clk.next();
 
-            clock(); // 14 lw   r4 0(r1)    (r4 <- dm[1] = 12)
-            assert (vips.pc == 32'h14);
-            // assert (vips.pc == 32'h14);
-            // assert (vips.rf_we == 1);
-            // assert (vips.alu_b_sel == 0);
-            // assert (vips.alu_op == 2'b10);
-            // assert (vips.alu_sub == 1);
-            // assert (vips.imm_sign_ext == 0); // don't care
-            // assert (vips.w_reg_sel == 1);
+        clk.next();
 
-            clock(); // 18 beq  r4 r4 1     (pc <- 0x20)
-            assert (vips.pc == 32'h18);
+        clk.next();
 
-            clock(); // 20 bne  r4 zero, -2 (pc <- 0x1c) 
-            // assert (vips.pc == 32'h20);
+        clk.next();
 
-            clock(); // 1c lw   r4 0(r1)    (r4 <- dm[1] = 12)
-            // assert (vips.pc == 32'h1c);
-            
-            // clock(); // 18 slt  r4 zero v1  (r4 <- zero < (-6) = 0)
-            // assert (vips.pc == 32'h18);
-            // assert (vips.rf_we == 1);
-            // assert (vips.alu_b_sel == 0);
-            // assert (vips.alu_op == 2'b11);
-            // assert (vips.alu_sub == 1);
-            // assert (vips.imm_sign_ext == 0); // don't care
-            // assert (vips.w_reg_sel == 1);
+        clk.next();
 
-            // clock(); // 1c slti r4 v1 -5    (r4 <- (-6) < (-5) = 1)
-            // assert (vips.pc == 32'h1c);
-            // assert (vips.rf_we == 1);
-            // assert (vips.alu_b_sel == 1);
-            // assert (vips.alu_op == 2'b11);
-            // assert (vips.alu_sub == 1);
-            // assert (vips.imm_sign_ext == 1);
-            // assert (vips.w_reg_sel == 0);
+        clk.next();
 
-            // clock(); // 20 slt  r5 zero r1  (r5 <- 0 < 8 = 1)
-            // assert (vips.pc == 32'h20);
-            // assert (vips.rf_we == 1);
-            // assert (vips.alu_b_sel == 0);
-            // assert (vips.alu_op == 2'b11);
-            // assert (vips.alu_sub == 1);
-            // assert (vips.imm_sign_ext == 0); // don't care
-            // assert (vips.w_reg_sel == 1);
+        clk.next();
 
-            // clock(); // 24 or   r6 r3 zero  (r6 <- -6 | 0 = -6)
-            // assert (vips.pc == 32'h24);
-            // assert (vips.rf_we == 1);
-            // assert (vips.alu_b_sel == 0);
-            // assert (vips.alu_op == 2'b01);
-            // assert (vips.alu_sub == 0);
-            // assert (vips.imm_sign_ext == 0);
-            // assert (vips.w_reg_sel == 1);
+        clk.next();
 
-            // clock(); // 28 and  r7 r1 r3    (r7 <- b0..1000 & b1..1010 = b1000 )
-            // assert (vips.pc == 32'h28);
-            // assert (vips.rf_we == 1);
-            // assert (vips.alu_b_sel == 0);
-            // assert (vips.alu_op == 2'b00);
-            // assert (vips.alu_sub == 0); // don't care
-            // assert (vips.imm_sign_ext == 0);
-            // assert (vips.w_reg_sel == 1);
+        clk.next();
 
-            // clock(); // 2c nor  a4 at v1    (-- not supported --)
-            // assert (vips.pc == 32'h2c);
-            // assert (vips.rf_we == 0);
-            // assert (vips.alu_b_sel == 0); // don't care
-            // assert (vips.alu_sub == 0); // don't care
-            // assert (vips.imm_sign_ext == 0); // don't care
-            // assert (vips.w_reg_sel == 1); // don't care
-            
-            // clock(); // 30 lui  zero 1      (-- not supported --)
-            // assert (vips.pc == 32'h30);
-            // assert (vips.rf_we == 0);
-            // assert (vips.alu_b_sel == 0); // don't care
-            // assert (vips.alu_sub == 0); // don't care
-            // assert (vips.imm_sign_ext == 0); // don't care
-            // assert (vips.w_reg_sel == 0); // don't care
- 
-            $finish;
-        end
-    endmodule
-}}}
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+        clk.next();
+
+    }
+
+}

@@ -48,11 +48,16 @@ module Alu #(
     // 0   10 add
     // 1   10 sub
     // 1   11 slt
+    var mux4_data   : logic<32> [4];
+    assign mux4_data[0] = a_and_b;
+    assign mux4_data[1] = a_or_b;
+    assign mux4_data[2] = sum;
+    assign mux4_data[3] = extend_out;
     inst mux: Mux4 #(
         Width  ,
     ) (
-        i_data: {a_and_b, a_or_b, sum, extend_out},
-        i_sel : op                                ,
-        o_data: r                                 ,
+        i_data: mux4_data,
+        i_sel : op       ,
+        o_data: r        ,
     );
 }
