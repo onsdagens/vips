@@ -11,13 +11,20 @@ module DataMem #(
     i_dbg_addr: input  logic           <32>,
     o_data    : output logic           <32>,
     o_dbg_data: output logic           <32>,
+    led0      : output logic               ,
+    led1      : output logic               ,
+    led2      : output logic               ,
+    led3      : output logic               ,
 ) {
-    var mem: logic<32> [Words]; // mem is Words sized array of 32 bit data
-
+    var mem : logic<32> [Words]; // mem is Words sized array of 32 bit data
+    assign led0 = mem[0][0];
+    assign led1 = mem[0][1];
+    assign led2 = mem[0][2];
+    assign led3 = mem[0][3];
     // synchronized update
     always_ff (i_clk, i_reset) {
         if_reset {
-            for i: u32 in 0..Words {
+            for i in 0..Words {
                 mem[i] = 0;
             }
         } else {

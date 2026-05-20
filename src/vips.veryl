@@ -7,7 +7,7 @@ module Vips (
     led0     : output logic          ,
     led1     : output logic          ,
     led2     : output logic          ,
-    led3     : output logic,
+    led3     : output logic          ,
     // i_dbg_reg     : input  logic           <5> ,
     // i_dbg_dm_addr : input  logic           <32>,
     // o_dbg_reg_data: output logic           <32>,
@@ -46,10 +46,15 @@ module Vips (
     var pc_branch: logic<32>; // relative
     var pc_jump  : logic<32>; // 26 bit immediate
 
+    var pc_mux_input   : logic<32> [4];
+    assign pc_mux_input[0] = pc_plus4;
+    assign pc_mux_input[1] = wb_data;
+    assign pc_mux_input[2] = pc_branch;
+    assign pc_mux_input[3] = pc_jump;
     inst pc_mux: Mux4 (
-        i_data: {pc_plus4, wb_data, pc_branch, pc_jump},
-        i_sel : pc_sel                                 ,
-        o_data: pc_next                                ,
+        i_data: pc_mux_input,
+        i_sel : pc_sel      ,
+        o_data: pc_next     ,
     );
 
     var instr: logic<32>;
@@ -59,7 +64,7 @@ module Vips (
         o_instr: instr,
     );
 
-    assign pc_jump = {pc_plus4[31:28], instr[25:0], 2'h00};
+    assign pc_jump = {pc_plus4[31:28], instr[25:0], 2'b00};
 
     let opcode: logic<6>  = instr[31:26];
     let funct : logic<6>  = instr[5:0];
@@ -97,22 +102,30 @@ module Vips (
 
     var wb_reg: logic<5>;
 
+    var reg_d_mux_input   : logic<5> [2];
+    assign reg_d_mux_input[0] = rt;
+    assign reg_d_mux_input[1] = rd;
+
     inst reg_d_mux: Mux2 #(
         Width: 5,
     ) (
-        i_data: {rt, rd} ,
-        i_sel : w_reg_sel,
-        o_data: wb_reg   ,
+        i_data: reg_d_mux_input,
+        i_sel : w_reg_sel      ,
+        o_data: wb_reg         ,
     );
 
     var alu_r  : logic<32>;
     var dm_data: logic<32>;
 
     // write back data
+    var wb_mux_input   : logic<32> [2];
+    assign wb_mux_input[0] = alu_r;
+    assign wb_mux_input[1] = dm_data;
+
     inst wb_mux: Mux2 (
-        i_data: {alu_r, dm_data},
-        i_sel : d_sel           ,
-        o_data: wb_data         ,
+        i_data: wb_mux_input,
+        i_sel : d_sel       ,
+        o_data: wb_data     ,
     );
 
     var a_data: logic<32>;
@@ -158,12 +171,14 @@ module Vips (
         carry: _            , // we don't care if carry set
     );
 
-    var alu_src: logic<32>;
-
+    var alu_src             : logic<32>    ;
+    var alu_src_mux_input   : logic<32> [2];
+    assign alu_src_mux_input[0] = b_data;
+    assign alu_src_mux_input[1] = imm32ext;
     inst alu_src_mux: Mux2 (
-        i_data: {b_data, imm32ext},
-        i_sel : alu_b_sel         ,
-        o_data: alu_src           ,
+        i_data: alu_src_mux_input,
+        i_sel : alu_b_sel        ,
+        o_data: alu_src          ,
     );
 
     inst alu: Alu (

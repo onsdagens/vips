@@ -22,7 +22,7 @@ module RegFile (
     always_ff {
         if i_reset {
             // regs = {{32'0} repeat 32};
-            for i: u32 in 0..32 {
+            for i in 0..32 {
                 regs[i] = 0;
             }
         } else {
